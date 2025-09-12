@@ -79,10 +79,14 @@ def highway_impl(_prompt, _id, _workflow, _way_in, flag, kwargs):
 	# Time to let the magic play out
 		
 	curr_node = next(_ for _ in _workflow["workflow"]["nodes"] if str(_["id"]) == _id)
+	extraIdx = 0
 
 	for i, curr_input in enumerate(curr_node["inputs"]):
 		if curr_input["name"] in kwargs:
-			name = _workflow["workflow"]["extra"]["0246.__NAME__"][_id]["inputs"][str(i)]["name"][1:]
+			name = _workflow["workflow"]["extra"]["0246.__NAME__"][_id]["inputs"][str(i+extraIdx)]["name"][1:]
+			if name == 'query':
+				extraIdx = 1
+				name = _workflow["workflow"]["extra"]["0246.__NAME__"][_id]["inputs"][str(i+extraIdx)]["name"][1:]
 			if flag:
 				_way_in[("data", name)] = lib0246.RevisionBatch(*kwargs[curr_input["name"]])
 			else:
