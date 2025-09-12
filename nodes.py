@@ -1053,9 +1053,9 @@ def map_node_over_list_res_handle(result, *args, **kwargs):
 					break
 	return result
 
-lib0246.hijack(execution, "map_node_over_list", map_node_over_list_param_handle, map_node_over_list_res_handle)
+# lib0246.hijack(execution, "map_node_over_list", map_node_over_list_param_handle, map_node_over_list_res_handle)
 # Honestly not many option beside hijacking _map_node_over_list
-lib0246.hijack(execution, "_map_node_over_list", map_node_over_list_param_handle, map_node_over_list_res_handle)
+lib0246.hijack(execution, "_async_map_node_over_list", map_node_over_list_param_handle, map_node_over_list_res_handle)
 
 CLASS_LIST = None
 

@@ -10,6 +10,7 @@ import math
 import collections
 import random
 import copy
+import asyncio
 
 import PIL
 import numpy
@@ -342,19 +343,48 @@ def stub_param_handle(*args, **kwargs):
 	return None, tuple(), {}
 
 def hijack(scope, name, param_func = stub_param_handle, res_func = None, out_scope = None):
-	old_func = getattr(scope, name)
-	def new_func(*args, **kwargs):
-		call_func, new_args, new_kwargs = param_func(*args, **kwargs)
-		final_args = tuple(new_args[i] if i < len(new_args) else args[i] for i in range(len(args)))
-		for key in new_kwargs:
-			kwargs[key] = new_kwargs[key]
-		res_value = None
-		if call_func is None:
-			res_value = old_func(*final_args, **kwargs)
-		else:
-			res_value = call_func(old_func, *final_args, **kwargs)
-		return res_value if res_func is None else res_func(res_value, *final_args, **kwargs)
-	setattr(scope if out_scope is None else out_scope, name, new_func)
+    old_func = getattr(scope, name)
+    is_async = asyncio.iscoroutinefunction(old_func)
+
+    if is_async:
+        # Async wrapper
+        async def new_func(*args, **kwargs):
+            call_func, new_args, new_kwargs = param_func(*args, **kwargs)
+            final_args = tuple(new_args[i] if i < len(new_args) else args[i] for i in range(len(args)))
+            for key in new_kwargs:
+                kwargs[key] = new_kwargs[key]
+
+            if call_func is None:
+                res_value = await old_func(*final_args, **kwargs)
+            else:
+                temp_res_value = call_func(old_func, *final_args, **kwargs)
+                if asyncio.iscoroutine(temp_res_value):
+                    res_value = await temp_res_value
+                else:
+                    res_value = temp_res_value
+
+            if res_func is None:
+                return res_value
+            else:
+                if asyncio.iscoroutinefunction(res_func):
+                    return await res_func(res_value, *final_args, **kwargs)
+                else:
+                    return res_func(res_value, *final_args, **kwargs)
+    else:
+        # Sync wrapper (original behavior)
+        def new_func(*args, **kwargs):
+            call_func, new_args, new_kwargs = param_func(*args, **kwargs)
+            final_args = tuple(new_args[i] if i < len(new_args) else args[i] for i in range(len(args)))
+            for key in new_kwargs:
+                kwargs[key] = new_kwargs[key]
+            res_value = None
+            if call_func is None:
+                res_value = old_func(*final_args, **kwargs)
+            else:
+                res_value = call_func(old_func, *final_args, **kwargs)
+            return res_value if res_func is None else res_func(res_value, *final_args, **kwargs)
+    # Apply patch
+    setattr(scope if out_scope is None else out_scope, name, new_func)
 
 class Wrapper(wrapt.ObjectProxy):
 	_0246 = None
